@@ -11,14 +11,10 @@
     <div class="book">
       <div class="page" id="left-page"></div>
       <div class="page" id="right-page"></div>
-    </div>
-    <div class="controls">
-      <button onclick="prevPage()" aria-label="Previous page">
-        <span class="click-area">←</span>
-      </button>
-      <button onclick="nextPage()" aria-label="Next page">
-        <span class="click-area">→</span>
-      </button>
+      <div class="controls">
+        <div class="click-area left" onclick="prevPage()"></div>
+        <div class="click-area right" onclick="nextPage()"></div>
+      </div>
     </div>
   </div>
   <script src="script.js"></script>
