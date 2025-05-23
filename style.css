@@ -123,30 +123,53 @@ body {
     bottom: 0;
     display: flex;
     z-index: 10;
+    pointer-events: none;
 }
 
-.controls button {
+.click-area {
     flex: 1;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0;
     height: 100%;
+    cursor: pointer;
+    pointer-events: auto;
     transition: background-color 0.3s ease;
+    position: relative;
 }
 
-.controls button:hover {
+.click-area:hover {
     background-color: rgba(0, 0, 0, 0.05);
 }
 
-.controls button:disabled {
-    cursor: default;
-    background: none;
+.click-area.left::after,
+.click-area.right::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    transform: translateY(-50%);
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
 }
 
-/* Remove the previous button styling */
-.controls button[onclick="prevPage()"]::before,
-.controls button[onclick="nextPage()"]::before {
+.click-area.left::after {
+    left: 20px;
+    border-width: 8px 8px 8px 0;
+    border-color: transparent #8b5e3c transparent transparent;
+}
+
+.click-area.right::after {
+    right: 20px;
+    border-width: 8px 0 8px 8px;
+    border-color: transparent transparent transparent #8b5e3c;
+}
+
+.click-area:hover::after {
+    opacity: 0.6;
+}
+
+/* Remove old button styles */
+.controls button {
     display: none;
 }
 
@@ -236,27 +259,6 @@ body {
     z-index: 2;
 }
 
-.click-area {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 2em;
-    color: rgba(139, 94, 60, 0.3);
-    transition: color 0.3s ease;
-}
-
-.controls button[onclick="prevPage()"] .click-area {
-    left: 20px;
-}
-
-.controls button[onclick="nextPage()"] .click-area {
-    right: 20px;
-}
-
-.controls button:hover .click-area {
-    color: rgba(139, 94, 60, 0.6);
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .book {
@@ -292,15 +294,11 @@ body {
         padding-left: 1.2em;
     }
     
-    .click-area {
-        font-size: 1.5em;
-    }
-    
-    .controls button[onclick="prevPage()"] .click-area {
+    .click-area.left::after {
         left: 10px;
     }
     
-    .controls button[onclick="nextPage()"] .click-area {
+    .click-area.right::after {
         right: 10px;
     }
 }
