@@ -81,6 +81,7 @@ body {
     overflow: hidden;
     position: relative;
     z-index: 1;
+    transition: opacity 0.3s ease;
 }
 
 .page h1 {
@@ -150,18 +151,7 @@ body {
 }
 
 .image-placeholder {
-    margin: 2em 0;
-    padding: 1em;
-    background: #f8f4f0;
-    border: 2px dashed #8b5e3c;
-    border-radius: 5px;
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #8b5e3c;
-    font-style: italic;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    display: none;
 }
 
 .page ul {
@@ -222,6 +212,15 @@ body {
         rgba(0,0,0,0) 100%);
     pointer-events: none;
     z-index: 3;
+}
+
+/* Handle preloaded content */
+.page.turning .page-content {
+    opacity: 0;
+}
+
+.page.turning .page-content:last-child {
+    opacity: 1;
 }
 
 /* Book cover effect */
@@ -304,5 +303,38 @@ body {
     .controls button[onclick="nextPage()"] .click-area {
         right: 10px;
     }
+}
+
+.character, .creature, .landmark {
+    color: #8b5e3c;
+    cursor: pointer;
+    position: relative;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+    transition: color 0.3s ease;
+}
+
+.character:hover, .creature:hover, .landmark:hover {
+    color: #a47148;
+}
+
+.image-popup {
+    position: fixed;
+    display: none;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 1000;
+    max-width: 300px;
+    transition: opacity 0.3s ease;
+}
+
+.image-popup img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
 }
   

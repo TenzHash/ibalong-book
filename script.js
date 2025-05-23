@@ -87,30 +87,18 @@ const originalContent = [
     {
       left: `<h1>Ibalong</h1>
              <h2>A Virtual Coffee Table Book</h2>
-             <p>Exploring the rich cultural heritage of Bicol through its epic tale</p>
-             <div class="image-placeholder">
-               <!-- Add a beautiful cover image of Mayon Volcano or Bicol landscape -->
-             </div>`,
+             <p>Exploring the rich cultural heritage of Bicol through its epic tale</p>`,
       right: `<h2>Foreword</h2>
               <p>Welcome to this journey through the epic tale of Ibalong, a story that has shaped the cultural identity of the Bicol region for generations. This virtual coffee table book invites you to explore the rich tapestry of myths, heroes, and legends that continue to resonate in modern Bicolano life.</p>
-              <p>Through these pages, we will journey through time, from the ancient settlements of Ibalong to the vibrant modern Bicol region. We will meet legendary heroes, encounter mythical creatures, and discover how this epic continues to influence Bicolano culture today.</p>
-              <div class="image-placeholder">
-                <!-- Add an image of traditional Bicolano art or manuscript -->
-              </div>`
+              <p>Through these pages, we will journey through time, from the ancient settlements of Ibalong to the vibrant modern Bicol region. We will meet legendary heroes, encounter mythical creatures, and discover how this epic continues to influence Bicolano culture today.</p>`
     },
     {
       left: `<h2>Introduction: The Legend of Ibalong</h2>
              <p>The Ibalong Epic is one of the Philippines' most significant literary treasures, originating from the Bicol region. This epic poem, passed down through generations, tells the story of how the ancient land of Ibalong was settled and civilized by three legendary heroes.</p>
-             <p>The epic begins with the arrival of Baltog, a mighty warrior from the land of Botavara. His victory over the giant wild boar Tandayag marked the beginning of human settlement in Ibalong. This was followed by the arrival of Handyong, who brought order and civilization to the land, and finally Bantong, who defeated the last remaining monster, Rabot.</p>
-             <div class="image-placeholder">
-               <!-- Add an image of ancient Bicolano settlement o   r artifacts -->
-             </div>`,
+             <p>The epic begins with the arrival of <span class="character" data-image="baltog.jpg">Baltog</span>, a mighty warrior from the land of Botavara. His victory over the giant wild boar <span class="creature" data-image="tandayag.jpg">Tandayag</span> marked the beginning of human settlement in Ibalong. This was followed by the arrival of <span class="character" data-image="handyong.jpg">Handyong</span>, who brought order and civilization to the land, and finally <span class="character" data-image="bantong.jpg">Bantong</span>, who defeated the last remaining monster, <span class="creature" data-image="rabot.jpg">Rabot</span>.</p>`,
       right: `<h2>Map of Ancient Ibalong</h2>
               <p>The ancient land of Ibalong encompassed what is now known as the Bicol region, stretching from the southern tip of Luzon to the islands of Masbate and Catanduanes. This fertile land, surrounded by the Pacific Ocean and the Philippine Sea, was home to both mythical creatures and the first settlers of Bicol.</p>
-              <p>The region's geography played a crucial role in shaping the epic's narrative. The majestic Mayon Volcano, the lush forests, and the surrounding seas all feature prominently in the stories of Ibalong's heroes and their battles against the forces of nature and mythical creatures.</p>
-              <div class="image-placeholder">
-                <!-- Add a map of ancient Ibalong -->
-              </div>`
+              <p>The region's geography played a crucial role in shaping the epic's narrative. The majestic <span class="landmark" data-image="mayon.jpg">Mayon Volcano</span>, the lush forests, and the surrounding seas all feature prominently in the stories of Ibalong's heroes and their battles against the forces of nature and mythical creatures.</p>`
     },
     {
       left: `<h2>The Bicolano Worldview</h2>
@@ -405,6 +393,57 @@ const pages = splitContentIntoPages(originalContent);
   
   let currentIndex = 0;
 let isAnimating = false;
+
+// Add popup functionality
+function createPopup() {
+    const popup = document.createElement('div');
+    popup.className = 'image-popup';
+    document.body.appendChild(popup);
+    return popup;
+}
+
+function showPopup(element, imagePath) {
+    const popup = document.querySelector('.image-popup') || createPopup();
+    const rect = element.getBoundingClientRect();
+    
+    popup.innerHTML = `<img src="images/${imagePath}" alt="${element.textContent}">`;
+    popup.style.display = 'block';
+    
+    // Position the popup
+    const popupRect = popup.getBoundingClientRect();
+    let left = rect.left + (rect.width / 2) - (popupRect.width / 2);
+    let top = rect.bottom + 10;
+    
+    // Adjust if popup would go off screen
+    if (left + popupRect.width > window.innerWidth) {
+        left = window.innerWidth - popupRect.width - 10;
+    }
+    if (top + popupRect.height > window.innerHeight) {
+        top = rect.top - popupRect.height - 10;
+    }
+    
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+}
+
+function hidePopup() {
+    const popup = document.querySelector('.image-popup');
+    if (popup) {
+        popup.style.display = 'none';
+    }
+}
+
+// Add event listeners for popups
+function addPopupListeners() {
+    document.querySelectorAll('.character, .creature, .landmark').forEach(element => {
+        element.addEventListener('mouseenter', (e) => {
+            const imagePath = e.target.dataset.image;
+            showPopup(e.target, imagePath);
+        });
+        
+        element.addEventListener('mouseleave', hidePopup);
+    });
+}
   
   function renderPages() {
     const leftPage = document.getElementById("left-page");
@@ -439,6 +478,9 @@ let isAnimating = false;
     // Update button states
     document.querySelector('button[onclick="prevPage()"]').disabled = currentIndex === 0;
     document.querySelector('button[onclick="nextPage()"]').disabled = currentIndex === pages.length - 1;
+    
+    // Add popup listeners to new content
+    addPopupListeners();
 }
 
 function turnPage(direction) {
@@ -446,6 +488,25 @@ function turnPage(direction) {
     isAnimating = true;
 
     const rightPage = document.getElementById('right-page');
+    const leftPage = document.getElementById('left-page');
+    
+    if (direction === 'next') {
+        // Preload next page content on the right
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < pages.length) {
+            const rightContent = document.createElement('div');
+            rightContent.className = 'page-content';
+            rightContent.innerHTML = pages[nextIndex].right;
+            rightContent.style.opacity = '0';
+            rightPage.appendChild(rightContent);
+            
+            // Add page number
+            const rightPageNum = document.createElement('div');
+            rightPageNum.className = 'page-number';
+            rightPageNum.textContent = `Page ${nextIndex * 2 + 2}`;
+            rightPage.appendChild(rightPageNum);
+        }
+    }
     
     // Add turning class for animation
     rightPage.classList.add('turning');
