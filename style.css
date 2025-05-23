@@ -115,40 +115,38 @@ body {
 }
 
 .controls {
-    margin-top: 2em;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
-    justify-content: center;
-    gap: 1em;
+    z-index: 10;
 }
 
 .controls button {
-    padding: 12px 25px;
-    font-size: 1.1em;
-    background-color: #8b5e3c;
-    color: white;
+    flex: 1;
+    background: transparent;
     border: none;
     cursor: pointer;
-    border-radius: 5px;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    padding: 0;
+    height: 100%;
+    transition: background-color 0.3s ease;
 }
 
 .controls button:hover {
-    background-color: #a47148;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
-.controls button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 3px rgba(0,0,0,0.2);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .controls button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+    cursor: default;
+    background: none;
+}
+
+/* Remove the previous button styling */
+.controls button[onclick="prevPage()"]::before,
+.controls button[onclick="nextPage()"]::before {
+    display: none;
 }
 
 .image-placeholder {
@@ -239,7 +237,28 @@ body {
     z-index: 2;
 }
 
-/* Responsive design */
+.click-area {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2em;
+    color: rgba(139, 94, 60, 0.3);
+    transition: color 0.3s ease;
+}
+
+.controls button[onclick="prevPage()"] .click-area {
+    left: 20px;
+}
+
+.controls button[onclick="nextPage()"] .click-area {
+    right: 20px;
+}
+
+.controls button:hover .click-area {
+    color: rgba(139, 94, 60, 0.6);
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
     .book {
         flex-direction: column;
@@ -256,9 +275,9 @@ body {
         border-bottom: 2px solid #8b5e3c;
     }
     
-    .controls button {
-        padding: 10px 20px;
-        font-size: 1em;
+    .controls {
+        position: relative;
+        height: 100px;
     }
     
     .image-placeholder {
@@ -272,6 +291,18 @@ body {
     
     .page ul li {
         padding-left: 1.2em;
+    }
+    
+    .click-area {
+        font-size: 1.5em;
+    }
+    
+    .controls button[onclick="prevPage()"] .click-area {
+        left: 10px;
+    }
+    
+    .controls button[onclick="nextPage()"] .click-area {
+        right: 10px;
     }
 }
   

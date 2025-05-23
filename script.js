@@ -103,7 +103,7 @@ const originalContent = [
              <p>The Ibalong Epic is one of the Philippines' most significant literary treasures, originating from the Bicol region. This epic poem, passed down through generations, tells the story of how the ancient land of Ibalong was settled and civilized by three legendary heroes.</p>
              <p>The epic begins with the arrival of Baltog, a mighty warrior from the land of Botavara. His victory over the giant wild boar Tandayag marked the beginning of human settlement in Ibalong. This was followed by the arrival of Handyong, who brought order and civilization to the land, and finally Bantong, who defeated the last remaining monster, Rabot.</p>
              <div class="image-placeholder">
-               <!-- Add an image of ancient Bicolano settlement or artifacts -->
+               <!-- Add an image of ancient Bicolano settlement o   r artifacts -->
              </div>`,
       right: `<h2>Map of Ancient Ibalong</h2>
               <p>The ancient land of Ibalong encompassed what is now known as the Bicol region, stretching from the southern tip of Luzon to the islands of Masbate and Catanduanes. This fertile land, surrounded by the Pacific Ocean and the Philippine Sea, was home to both mythical creatures and the first settlers of Bicol.</p>
@@ -402,11 +402,11 @@ const originalContent = [
 
 // Split content into pages
 const pages = splitContentIntoPages(originalContent);
-
-let currentIndex = 0;
+  
+  let currentIndex = 0;
 let isAnimating = false;
-
-function renderPages() {
+  
+  function renderPages() {
     const leftPage = document.getElementById("left-page");
     const rightPage = document.getElementById("right-page");
     
@@ -461,15 +461,15 @@ function turnPage(direction) {
         renderPages();
         isAnimating = false;
     }, 600); // Match this with CSS transition duration
-}
-
-function nextPage() {
+  }
+  
+  function nextPage() {
     if (currentIndex < pages.length - 1 && !isAnimating) {
         turnPage('next');
     }
-}
-
-function prevPage() {
+  }
+  
+  function prevPage() {
     if (currentIndex > 0 && !isAnimating) {
         turnPage('prev');
     }
@@ -508,7 +508,7 @@ function handleSwipe() {
             prevPage();
         }
     }
-}
-
-window.onload = renderPages;
+  }
+  
+  window.onload = renderPages;
   

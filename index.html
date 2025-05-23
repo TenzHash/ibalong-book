@@ -13,8 +13,12 @@
       <div class="page" id="right-page"></div>
     </div>
     <div class="controls">
-      <button onclick="prevPage()">⟵ Previous</button>
-      <button onclick="nextPage()">Next ⟶</button>
+      <button onclick="prevPage()" aria-label="Previous page">
+        <span class="click-area">←</span>
+      </button>
+      <button onclick="nextPage()" aria-label="Next page">
+        <span class="click-area">→</span>
+      </button>
     </div>
   </div>
   <script src="script.js"></script>
