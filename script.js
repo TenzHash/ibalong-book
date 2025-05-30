@@ -1,575 +1,760 @@
+// Helper function to create a temporary element to measure content
+function measureContent(html) {
+  const temp = document.createElement("div");
+  try {
+    temp.style.visibility = "hidden";
+    temp.style.position = "absolute";
+    temp.style.width = "100%";
+    temp.innerHTML = html;
+    document.body.appendChild(temp);
+    return temp.offsetHeight;
+  } finally {
+    // Ensure the temporary element is removed
+    document.body.removeChild(temp);
+  }
+}
+
 // Function to split content into pages
 function splitContentIntoPages(content) {
-    const pages = [];
-    let currentPage = { left: '', right: '' };
-    let currentSide = 'left';
-    let currentHeight = 0;
-    const maxHeight = 600; // Maximum height for each page
+  const pages = [];
+  const maxHeight = 700; // Maximum height for each page
 
-    // Helper function to create a temporary element to measure content
-    function measureContent(html) {
-        const temp = document.createElement('div');
-        temp.style.visibility = 'hidden';
-        temp.style.position = 'absolute';
-        temp.style.width = '100%';
-        temp.innerHTML = html;
-        document.body.appendChild(temp);
-        const height = temp.offsetHeight;
-        document.body.removeChild(temp);
-        return height;
+  // Process each section of content
+  for (let i = 0; i < content.length; i++) {
+    const section = content[i];
+
+    // Ensure section and its properties exist
+    if (!section || !section.left || !section.right) {
+      console.warn(`Invalid content at index ${i}`);
+      continue;
     }
 
-    // Process each section of content
-    content.forEach(section => {
-        const leftContent = section.left;
-        const rightContent = section.right;
+    const leftContent = section.left;
+    const rightContent = section.right;
 
-        // Measure the height of the content
-        const leftHeight = measureContent(leftContent);
-        const rightHeight = measureContent(rightContent);
+    // Measure the height of the content
+    const leftHeight = measureContent(leftContent);
+    const rightHeight = measureContent(rightContent);
 
-        // If content is too tall for one page, split it
-        if (leftHeight > maxHeight || rightHeight > maxHeight) {
-            // Split the content into multiple pages
-            const leftPages = splitContent(leftContent, maxHeight);
-            const rightPages = splitContent(rightContent, maxHeight);
+    // If content is too tall for one page, split it
+    if (leftHeight > maxHeight) {
+      // Split left content into multiple pages
+      const leftPages = splitContent(leftContent, maxHeight);
+      pages.push(...leftPages);
+    } else {
+      pages.push(leftContent);
+    }
 
-            // Add pages
-            for (let i = 0; i < Math.max(leftPages.length, rightPages.length); i++) {
-                pages.push({
-                    left: leftPages[i] || '',
-                    right: rightPages[i] || ''
-                });
-            }
-        } else {
-            // Add as a single page
-            pages.push({
-                left: leftContent,
-                right: rightContent
-            });
-        }
-    });
+    if (rightHeight > maxHeight) {
+      // Split right content into multiple pages
+      const rightPages = splitContent(rightContent, maxHeight);
+      pages.push(...rightPages);
+    } else {
+      pages.push(rightContent);
+    }
+  }
 
-    return pages;
+  return pages;
 }
+
+// Function to render pages (placeholder, implement as needed)
+function renderPages() {
+  console.log("Rendering pages...");
+  const leftPage = document.getElementById("left-page");
+  const rightPage = document.getElementById("right-page");
+
+  // Clear existing content
+  leftPage.innerHTML = "";
+  rightPage.innerHTML = "";
+
+  // Add current page content
+  // Check if the left page exists in the pages array
+  if (currentIndex < pages.length) {
+    const leftContent = document.createElement("div");
+    leftContent.className = "page-content";
+    leftContent.innerHTML = pages[currentIndex]; // Use the content directly
+    leftPage.appendChild(leftContent);
+
+    // Add page number for left page
+    const leftPageNum = document.createElement("div");
+    leftPageNum.className = "page-number";
+    leftPageNum.textContent = `Page ${currentIndex + 1}`;
+    leftPage.appendChild(leftPageNum);
+  }
+
+  // Add right page content if available
+  // Check if the right page exists in the pages array
+  if (currentIndex + 1 < pages.length) {
+    const rightContent = document.createElement("div");
+    rightContent.className = "page-content";
+    rightContent.innerHTML = pages[currentIndex + 1]; // Use the content directly
+    rightPage.appendChild(rightContent);
+
+    // Add page number for right page
+    const rightPageNum = document.createElement("div");
+    rightPageNum.className = "page-number";
+    rightPageNum.textContent = `Page ${currentIndex + 2}`;
+    rightPage.appendChild(rightPageNum);
+  }
+
+  // Add popup listeners to new content
+  addPopupListeners();
+}
+
+// Function to go to a specific page number
+function goToPage(pageNumber) {
+  const targetIndex = pageNumber - 1; // Adjust for 0-based index
+  const totalPages = pages.length;
+
+  // Validate the page number
+  if (isNaN(pageNumber) || pageNumber < 1 || pageNumber > totalPages) {
+    console.warn(`Invalid page number: ${pageNumber}. Please enter a number between 1 and ${totalPages}.`);
+    // Optionally, provide user feedback in the UI
+    return;
+  }
+
+  // Update currentIndex to the start of the spread containing the target page
+  // If the target page is odd, it's a left page, index is targetIndex.
+  // If the target page is even, it's a right page, the spread starts at targetIndex - 1.
+  currentIndex = (pageNumber % 2 !== 0) ? targetIndex : targetIndex - 1;
+
+  // Ensure currentIndex is not negative
+  if (currentIndex < 0) {
+    currentIndex = 0;
+  }
+
+  renderPages();
+}
+
+// On window load, split content into pages and render them
+window.onload = function () {
+  // Assuming `originalContent` is defined and contains the content to be split
+  const pages = splitContentIntoPages(originalContent);
+  currentIndex = 0;
+  renderPages();
+
+  // Apply zoom level
+  const bookElement = document.querySelector('.book');
+  if (bookElement) {
+    bookElement.style.transform = 'scale(1)';
+    bookElement.style.transformOrigin = 'top left'; // Optional: adjust origin if needed
+  }
+
+  // Generate and display page number list
+  const pageListContainer = document.getElementById('page-list-container');
+  const pageSize = 10; // Number of page numbers to display at once
+  let currentPageNumbersPage = 0; // Start at the first page of numbers (0-indexed)
+
+  function renderPageNumbers() {
+    if (!pageListContainer) return;
+
+    // Clear previous list and arrows
+    pageListContainer.innerHTML = '';
+
+    const totalPages = pages.length;
+    const start = currentPageNumbersPage * pageSize;
+    const end = Math.min(start + pageSize, totalPages);
+
+    // Add previous arrow
+    const prevArrow = document.createElement('span');
+    prevArrow.textContent = '<'; // Or use an image/icon
+    prevArrow.style.cursor = 'pointer';
+    prevArrow.style.marginRight = '10px';
+    prevArrow.style.fontWeight = 'bold';
+    prevArrow.style.visibility = currentPageNumbersPage > 0 ? 'visible' : 'hidden';
+    prevArrow.addEventListener('click', () => {
+      if (currentPageNumbersPage > 0) {
+        currentPageNumbersPage--;
+        renderPageNumbers();
+      }
+    });
+    pageListContainer.appendChild(prevArrow);
+
+    const pageList = document.createElement('ol');
+    // Add styles to the ordered list
+    pageList.style.padding = '0';
+    pageList.style.margin = '10px 0';
+    pageList.style.listStyle = 'none';
+    pageList.style.textAlign = 'center'; // Center the list
+    pageList.style.display = 'inline-block'; // Keep list inline with arrows
+
+    for (let i = start; i < end; i++) {
+      const listItem = document.createElement('li');
+      const pageNumber = i + 1;
+      listItem.textContent = pageNumber;
+      listItem.style.cursor = 'pointer'; // Indicate it's clickable
+      listItem.style.margin = '0 5px'; // Add some spacing
+      listItem.style.display = 'inline-block'; // Display horizontally
+      // Add more styling for appearance
+      listItem.style.width = '25px';
+      listItem.style.height = '25px';
+      listItem.style.lineHeight = '25px'; // Center text vertically
+      listItem.style.borderRadius = '50%'; // Make it a circle
+      listItem.style.backgroundColor = '#eee'; // Light grey background
+      listItem.style.color = '#333'; // Dark text color
+      listItem.style.fontWeight = 'bold';
+      listItem.style.transition = 'background-color 0.3s ease'; // Smooth hover transition
+
+      // Highlight current page number
+      if (i === currentIndex) {
+          listItem.style.backgroundColor = '#ccc';
+      }
+
+      // Add hover effect
+      listItem.addEventListener('mouseover', () => {
+        listItem.style.backgroundColor = '#ccc';
+      });
+      listItem.addEventListener('mouseout', () => {
+          if (i !== currentIndex) {
+              listItem.style.backgroundColor = '#eee';
+          }
+      });
+
+      listItem.addEventListener('click', () => {
+        goToPage(pageNumber);
+      });
+      pageList.appendChild(listItem);
+    }
+    pageListContainer.appendChild(pageList);
+
+    // Add next arrow
+    const nextArrow = document.createElement('span');
+    nextArrow.textContent = '>'; // Or use an image/icon
+    nextArrow.style.cursor = 'pointer';
+    nextArrow.style.marginLeft = '10px';
+    nextArrow.style.fontWeight = 'bold';
+    nextArrow.style.visibility = end < totalPages ? 'visible' : 'hidden';
+    nextArrow.addEventListener('click', () => {
+      if (end < totalPages) {
+        currentPageNumbersPage++;
+        renderPageNumbers();
+      }
+    });
+    pageListContainer.appendChild(nextArrow);
+  }
+
+  // Initial render of page numbers
+  renderPageNumbers();
+
+  // Modify renderPages to re-render page numbers to highlight current page
+  const originalRenderPages = renderPages;
+  renderPages = () => {
+      originalRenderPages();
+      renderPageNumbers(); // Re-render page numbers to update highlighting
+  };
+};
 
 // Helper function to split content into multiple pages
 function splitContent(content, maxHeight) {
-    const pages = [];
-    const temp = document.createElement('div');
-    temp.innerHTML = content;
-    const elements = Array.from(temp.children);
-    let currentPage = '';
-    let currentHeight = 0;
+  const pages = [];
+  const temp = document.createElement("div");
+  temp.innerHTML = content;
+  const elements = Array.from(temp.children);
+  let currentPage = "";
+  let currentHeight = 0;
 
-    elements.forEach(element => {
-        const elementHeight = measureContent(element.outerHTML);
-        
-        if (currentHeight + elementHeight > maxHeight) {
-            pages.push(currentPage);
-            currentPage = element.outerHTML;
-            currentHeight = elementHeight;
-        } else {
-            currentPage += element.outerHTML;
-            currentHeight += elementHeight;
-        }
-    });
+  elements.forEach((element) => {
+    const elementHeight = measureContent(element.outerHTML);
 
-    if (currentPage) {
+    if (currentHeight + elementHeight > maxHeight) {
+      if (currentPage) {
         pages.push(currentPage);
+      }
+      currentPage = element.outerHTML;
+      currentHeight = elementHeight;
+    } else {
+      currentPage += element.outerHTML;
+      currentHeight += elementHeight;
     }
+  });
 
-    return pages;
+  if (currentPage) {
+    pages.push(currentPage);
+  }
+
+  return pages;
 }
 
 // Original content array
 const originalContent = [
-    {
-      left: `<h1>Ibalong</h1>
+  {
+    left: `<h1>Ibalong</h1>
              <h2>A Virtual Coffee Table Book</h2>
-             <p>Exploring the rich cultural heritage of Bicol through its epic tale</p>`,
-      right: `<h2>Foreword</h2>
-              <p>Welcome to this journey through the epic tale of Ibalong, a story that has shaped the cultural identity of the Bicol region for generations. This virtual coffee table book invites you to explore the rich tapestry of myths, heroes, and legends that continue to resonate in modern Bicolano life.</p>
-              <p>Through these pages, we will journey through time, from the ancient settlements of Ibalong to the vibrant modern Bicol region. We will meet legendary heroes, encounter mythical creatures, and discover how this epic continues to influence Bicolano culture today.</p>`
-    },
-    {
-      left: `<h2>Introduction: The Legend of Ibalong</h2>
-             <p>The Ibalong Epic is one of the Philippines' most significant literary treasures, originating from the Bicol region. This epic poem, passed down through generations, tells the story of how the ancient land of Ibalong was settled and civilized by three legendary heroes.</p>
-             <p>The epic begins with the arrival of <span class="character" data-image="baltog.jpg">Baltog</span>, a mighty warrior from the land of Botavara. His victory over the giant wild boar <span class="creature" data-image="tandayag.jpg">Tandayag</span> marked the beginning of human settlement in Ibalong. This was followed by the arrival of <span class="character" data-image="handyong.jpg">Handyong</span>, who brought order and civilization to the land, and finally <span class="character" data-image="bantong.jpg">Bantong</span>, who defeated the last remaining monster, <span class="creature" data-image="rabot.jpg">Rabot</span>.</p>`,
-      right: `<h2>Map of Ancient Ibalong</h2>
-              <p>The ancient land of Ibalong encompassed what is now known as the Bicol region, stretching from the southern tip of Luzon to the islands of Masbate and Catanduanes. This fertile land, surrounded by the Pacific Ocean and the Philippine Sea, was home to both mythical creatures and the first settlers of Bicol.</p>
-              <p>The region's geography played a crucial role in shaping the epic's narrative. The majestic <span class="landmark" data-image="mayon.jpg">Mayon Volcano</span>, the lush forests, and the surrounding seas all feature prominently in the stories of Ibalong's heroes and their battles against the forces of nature and mythical creatures.</p>`
-    },
-    {
-      left: `<h2>The Bicolano Worldview</h2>
-             <p>The Bicolano worldview is deeply rooted in the harmony between nature and spirituality. This perspective is beautifully reflected in the Ibalong Epic, where the natural world is both revered and respected, and where humans must learn to live in balance with the forces of nature.</p>
-             <p>Key aspects of the Bicolano worldview include:</p>
-             <ul>
-               <li>Deep respect for nature and its forces</li>
-               <li>Belief in the interconnectedness of all living things</li>
-               <li>Importance of community and collective well-being</li>
-               <li>Balance between tradition and progress</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add an image of traditional Bicolano spiritual practices -->
-             </div>`,
-      right: `<h2>The Origins of the Epic</h2>
-              <p>The Ibalong Epic was first recorded by Spanish friars in the 17th century, though its origins date back much further. The epic was traditionally performed during festivals and important gatherings, serving as both entertainment and a means of preserving cultural knowledge.</p>
-              <p>The epic's preservation and transmission involved:</p>
-              <ul>
-                <li>Oral tradition through generations</li>
-                <li>Performance during community gatherings</li>
-                <li>Documentation by Spanish chroniclers</li>
-                <li>Modern scholarly research and interpretation</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of historical manuscripts or traditional performance -->
-              </div>`
-    },
-    {
-      left: `<h2>The Three Great Heroes</h2>
-             <h3>6.1 Baltog</h3>
-             <p>Baltog, the first hero of Ibalong, was a mighty warrior from the land of Botavara. He is best known for his legendary battle with the giant wild boar Tandayag, which he defeated using his bare hands. His victory marked the beginning of human settlement in Ibalong.</p>
-             <p>Key achievements of Baltog:</p>
-             <ul>
-               <li>First to establish human settlement in Ibalong</li>
-               <li>Defeated the giant wild boar Tandayag</li>
-               <li>Cleared the land for agriculture</li>
-               <li>Established the first community in the region</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add an image of Baltog's battle with Tandayag -->
-             </div>`,
-      right: `<h3>6.2 Handyong</h3>
-              <p>Handyong, the second hero, was a lawgiver and civilizer who brought order to Ibalong. Under his leadership, the land experienced its golden age. He established laws, taught agriculture, and led the people in their battles against the remaining monsters.</p>
-              <p>Handyong's contributions to Ibalong:</p>
-              <ul>
-                <li>Established a system of laws and governance</li>
-                <li>Introduced advanced agricultural techniques</li>
-                <li>Led the campaign against remaining monsters</li>
-                <li>Fostered peace and prosperity in the region</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of Handyong's golden age -->
-              </div>`
-    },
-    {
-      left: `<h3>6.3 Bantong</h3>
-             <p>Bantong, the third hero, was Handyong's trusted companion. He is most famous for his cunning and bravery in defeating the half-man, half-beast Rabot, the last remaining monster in Ibalong. His victory marked the end of the age of monsters.</p>
-             <p>Bantong's legacy includes:</p>
-             <ul>
-               <li>Defeat of the last monster, Rabot</li>
-               <li>Completion of Ibalong's transformation</li>
-               <li>Establishment of lasting peace</li>
-               <li>Symbol of courage and wisdom</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add an image of Bantong's battle with Rabot -->
-             </div>`,
-      right: `<h2>The Monsters of Ibalong</h2>
-              <h3>7.1 Tandayag the Wild Boar</h3>
-              <p>Tandayag was a giant wild boar that terrorized the early settlers of Ibalong. Its massive size and strength made it a formidable opponent, until it was finally defeated by Baltog in an epic battle that would be remembered for generations.</p>
-              <p>Characteristics of Tandayag:</p>
-              <ul>
-                <li>Gigantic size and strength</li>
-                <li>Destructive force of nature</li>
-                <li>Symbol of untamed wilderness</li>
-                <li>First major challenge to human settlement</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of Tandayag -->
-              </div>`
-    },
-    {
-      left: `<h3>7.2 Oryol the Serpent</h3>
-             <p>Oryol, a beautiful serpent with a woman's head, was one of the most complex characters in the epic. Initially an enemy of the settlers, she later became an ally and even a lover to Handyong, symbolizing the transformation of chaos into order.</p>
-             <p>Oryol's significance:</p>
-             <ul>
-               <li>Representation of nature's dual nature</li>
-               <li>Symbol of transformation and change</li>
-               <li>Bridge between human and natural worlds</li>
-               <li>Complex character development</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add an image of Oryol -->
-             </div>`,
-      right: `<h3>7.3 Other Mythical Beasts</h3>
-              <p>The epic tells of many other creatures that once roamed Ibalong: the one-eyed giants, the flying crocodiles, and the man-eating birds. Each of these creatures represented different challenges that the early settlers had to overcome.</p>
-              <p>Notable mythical creatures:</p>
-              <ul>
-                <li>One-eyed giants (Sarimao)</li>
-                <li>Flying crocodiles (Buringcantada)</li>
-                <li>Man-eating birds (Tandayag na Opong)</li>
-                <li>Giant snakes (Buringcantada)</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of mythical creatures -->
-              </div>`
-    },
-    {
-      left: `<h2>Oryol: Enemy and Lover</h2>
-             <p>The story of Oryol represents one of the most fascinating aspects of the Ibalong Epic. Her transformation from a fearsome monster to a beloved companion of Handyong symbolizes the reconciliation between the natural world and human civilization.</p>
-             <p>Key aspects of Oryol's story:</p>
-             <ul>
-               <li>Initial conflict with human settlers</li>
-               <li>Transformation through love</li>
-               <li>Role in establishing peace</li>
-               <li>Symbol of nature's benevolence</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add an image of Oryol and Handyong -->
-             </div>`,
-      right: `<h2>The Golden Age under Handyong</h2>
-              <p>Under Handyong's leadership, Ibalong experienced unprecedented peace and prosperity. The people learned agriculture, established laws, and built communities. This period represents the ideal state of harmony between humans and nature.</p>
-              <p>Achievements of the Golden Age:</p>
-              <ul>
-                <li>Advanced agricultural systems</li>
-                <li>Structured social organization</li>
-                <li>Peaceful coexistence with nature</li>
-                <li>Cultural and artistic development</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of Ibalong's golden age -->
-              </div>`
-    },
-    {
-      left: `<h2>The Fall and Resilience of Ibalong</h2>
-             <p>Despite the golden age, Ibalong faced challenges that led to its decline. However, the spirit of the epic lives on, continuing to inspire the Bicolano people to overcome adversity and maintain their cultural identity.</p>
-             <p>Factors in Ibalong's transformation:</p>
-             <ul>
-               <li>Natural disasters and calamities</li>
-               <li>External influences and changes</li>
-               <li>Adaptation to new circumstances</li>
-               <li>Preservation of cultural heritage</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add an image of historical Bicol -->
-             </div>`,
-      right: `<h2>Symbolism in the Epic</h2>
-              <p>The Ibalong Epic is rich in symbolism, with each character and event representing deeper meanings about human nature, the relationship between humans and nature, and the challenges of building a civilization.</p>
-              <p>Key symbolic elements:</p>
-              <ul>
-                <li>Heroes as cultural ideals</li>
-                <li>Monsters as natural challenges</li>
-                <li>Landscape as character</li>
-                <li>Transformation as growth</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of symbolic elements -->
-              </div>`
-    },
-    {
-      left: `<h2>Modern Interpretations</h2>
-             <p>Contemporary artists, writers, and scholars continue to find new meaning in the Ibalong Epic. Their interpretations help keep the story relevant to modern audiences while preserving its cultural significance.</p>
-             <p>Modern adaptations include:</p>
-             <ul>
-               <li>Literary retellings</li>
-               <li>Visual arts and illustrations</li>
-               <li>Performance arts</li>
-               <li>Digital media presentations</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add an image of modern interpretations -->
-             </div>`,
-      right: `<h2>The Ibalong Festival</h2>
-              <p>The Ibalong Festival, celebrated annually in Legazpi City, brings the epic to life through street performances, parades, and cultural shows. This modern celebration helps preserve the story and its cultural significance.</p>
-              <p>Festival highlights:</p>
-              <ul>
-                <li>Street performances</li>
-                <li>Cultural parades</li>
-                <li>Art exhibitions</li>
-                <li>Traditional ceremonies</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of the Ibalong Festival -->
-              </div>`
-    },
-    {
-      left: `<h2>Artifacts and Ancient Scripts</h2>
-             <p>Archaeological findings and ancient scripts provide valuable insights into the historical context of the Ibalong Epic. These artifacts help us understand the real-world basis for the epic's stories and characters.</p>
-             <p>Notable artifacts include:</p>
-             <ul>
-               <li>Ancient pottery and tools</li>
-               <li>Traditional weapons</li>
-               <li>Religious artifacts</li>
-               <li>Historical documents</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add an image of artifacts -->
-             </div>`,
-      right: `<h2>Legacy of Ibalong in Modern Bicolano Identity</h2>
-              <p>The Ibalong Epic continues to shape Bicolano identity, influencing art, literature, and cultural practices. Its themes of heroism, resilience, and harmony with nature remain relevant to contemporary Bicolano life.</p>
-              <p>Modern influences:</p>
-              <ul>
-                <li>Cultural festivals</li>
-                <li>Artistic expressions</li>
-                <li>Educational programs</li>
-                <li>Tourism initiatives</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of modern Bicolano culture -->
-              </div>`
-    },
-    {
-      left: `<h2>Photographic Essay: Bicol Today</h2>
-             <p>Modern Bicol showcases the enduring legacy of the Ibalong Epic. From its majestic Mayon Volcano to its vibrant festivals, the region continues to embody the spirit of the epic's heroes and their connection to the land.</p>
-             <p>Key photographic subjects:</p>
-             <ul>
-               <li>Natural landscapes</li>
-               <li>Cultural events</li>
-               <li>Traditional crafts</li>
-               <li>Modern developments</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add a photo essay image -->
-             </div>`,
-      right: `<h2>Glossary of Terms</h2>
-              <p>Key terms and concepts from the Ibalong Epic, explained to help readers better understand the cultural and historical context of the story.</p>
-              <ul>
-                <li>Ibalong - The ancient name of the Bicol region</li>
-                <li>Sarimao - One-eyed giants in the epic</li>
-                <li>Buringcantada - Flying crocodiles</li>
-                <li>Rabot - The last monster defeated by Bantong</li>
-                <li>Botavara - The homeland of Baltog</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of traditional Bicolano script -->
-              </div>`
-    },
-    {
-      left: `<h2>Bibliography and Sources</h2>
-             <p>A comprehensive list of sources used in the creation of this book, including academic papers, historical documents, and cultural resources.</p>
-             <ul>
-               <li>Academic Research Papers</li>
-               <li>Historical Documents</li>
-               <li>Cultural Studies</li>
-               <li>Oral Histories</li>
-               <li>Contemporary Interpretations</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add an image of historical documents -->
-             </div>`,
-      right: `<h2>Acknowledgments</h2>
-              <p>Special thanks to the scholars, artists, and cultural workers who have helped preserve and promote the Ibalong Epic throughout the years.</p>
-              <ul>
-                <li>Academic Researchers</li>
-                <li>Cultural Heritage Workers</li>
-                <li>Local Artists</li>
-                <li>Community Leaders</li>
-                <li>Historical Preservationists</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add an image of contributors -->
-              </div>`
-    },
-    {
-      left: `<h2>About the Author</h2>
-             <p>Information about the author's background, research, and connection to the Bicol region and its cultural heritage.</p>
-             <ul>
-               <li>Academic Background</li>
-               <li>Research Experience</li>
-               <li>Cultural Connections</li>
-               <li>Previous Works</li>
-             </ul>
-             <div class="image-placeholder">
-               <!-- Add author photo -->
-             </div>`,
-      right: `<h2>Contact Information</h2>
-              <p>For more information about the Ibalong Epic and Bicolano culture, please visit our website or contact us directly.</p>
-              <ul>
-                <li>Website</li>
-                <li>Email</li>
-                <li>Social Media</li>
-                <li>Cultural Center</li>
-              </ul>
-              <div class="image-placeholder">
-                <!-- Add contact information image -->
-              </div>`
-    }
+            <img src="images/ibalong.jpg" alt="Ibalong" width="80%" height="80%" />`,
+    right: `<h2>Introduction</h2>
+                <p>The Ibalong, an epic poem from the Bicol region of the Philippines, serves as a cultural treasure that encapsulates the values, struggles, and beliefs of the ancient Bikolanos. Preserved through oral tradition and later transcribed by Spanish friars, the Ibalong recounts a mytho-historical narrative centered on heroism, the triumph over chaos, and the civilizing mission of its protagonists.</p>
+                <p>This guide explores the major characters within the epic—both heroes and antagonists—offering insights into their roles and mythological significance.</p>`,
+  },
+  // BALTOG - Spread 1
+  {
+    left: `<h2>Baltog</h2>
+            <img src="images/baltog.png" alt="Baltog" />`,
+    right: `<h2>Baltog</h2>
+            <p><b>Short Title:</b> "The Boar Slayer of Ibalong"</p>
+            <p><b>Mythical Origin / Ethnic Background:</b> Boltavara (ancient India) - A legendary warrior-settler who migrated to the Philippines and became the founding hero of Ibalon (ancient Bicol region)</p>
+            <p><b>Key Role in the Epic:</b> Baltog was the first hero who settled in Ibalong and slew the wild boar Tandayag, making the land safe for cultivation.</p>
+            <p><b>Major Feats or Contributions:</b></p>
+            <ul>
+            <li style="text-align: left;">Defeated the monstrous boar Tandayag with his bare hands</li>
+            <li style="text-align: left;">Introduced taro cultivation to the region</li>
+            <li style="text-align: left;">Paved the way for future heroes to flourish in Ibalong</li>
+            <li style="text-align: left;">Became a symbol of strength, leadership, and agrarian prosperity</li>
+            </ul>`,
+  },
+  // BALTOG - Spread 2
+  {
+    left: `<h2>Baltog</h2>
+            <p><b>Symbolism / Cultural Meaning:</b> Baltog represents heroism, agricultural advancement, and the triumph of civilization over chaos in Bicolano mythology.</p>
+            <p><b>Allies and Enemies:</b></p>
+            <p>Allies: Handyong (later hero of Ibalong)</p>
+            <p>Enemies: Tandayag the boar, early monsters that terrorized the land</p>`,
+    right: `<h2>Baltog</h2>
+            <p><b>Known Artifacts or Tools (Optional):</b></p>
+            <ul>
+            <li>Boar tusks (kept as trophies or symbols of victory)</li>
+            <li>Clay jar used for taro storage</li>
+            <li>Bolo for farming and defense</li>
+            </ul>
+            <p><b>Quote / Excerpt from the Epic:</b> "With the strength of twenty men, Baltog seized the mighty Tandayag and broke its tusks with his bare hands, bringing peace to the land of Ibalong."
+            <p><b>Geographic / Mythical Locations:</b></p>
+            <ul>
+            <li style="text-align: left;">Ibalong Valley</li>
+            <li style="text-align: left;">Tandayag's Forest</li>
+            </ul>
+            <p><b>Trivia or Fun Fact:</b> Baltog is considered the patron of farmers in Bicol folklore. The taro plant (gabi) that he introduced remains a staple food in the region today.</p>`,
+  },
+  // HANDIONG - Spread 1
+  {
+    left: `<h2>Handiong</h2>
+            <img src="images/handiong.png" alt="Handiong" />`,
+    right: `<h2>Handiong</h2>
+            <p><b>Short Title:</b> "The Monster Slayer"</p>
+            <p><b>Mythical Origin / Ethnic Background:</b> Noble warrior from Boltavara (ancient India) - Second great hero of Ibalong, successor to Baltog, possessing both martial prowess and wisdom of governance</p>
+            <p><b>Key Role in the Epic:</b> Handiong was the second great hero who continued Baltog's work, eliminated the remaining monsters terrorizing Ibalong, and established the first system of laws, writing, and advanced civilization in the region.</p>
+            <p><b>Major Feats or Contributions:</b></p>
+            <ul>
+            <li style="text-align: left;">Defeated the multi-headed monster Rabot and countless other beasts</li>
+            <li style="text-align: left;">Established the first written laws and legal system</li>
+            <li style="text-align: left;">Introduced the first writing system (syllabary) to the region</li>
+            </ul>`,
+  },
+  // HANDIONG - Spread 2
+  {
+    left: `<h2>Handiong</h2>
+            <p><b>Symbolism / Cultural Meaning:</b> Symbol of law, order, education, and civilization. Represents the transition from primitive survival to organized society, the importance of literacy and justice, and the ideal ruler who serves his people through wisdom and strength.</p>
+            <p><b>Allies and Enemies:</b></p>
+            <p>Allies: Bantong (his loyal lieutenant), surviving followers of Baltog, local chieftains</p>
+            <p>Enemies: Rabot (multi-headed monster), various giants and supernatural beasts, bandits and lawless elements</p>`,
+    right: `<h2>Handiong</h2>
+            <p><b>Known Artifacts or Tools:</b></p>
+            <ul>
+            <li>Enchanted sword or kampilan</li>
+            <li>Clay tablets with the first syllabary</li>
+            <li>Law tablets</li>
+            <li>Surveying tools for road-building</li>
+            <li>Royal seal</li>
+            </ul>
+            <p><b>Quote / Excerpt from the Epic:</b> "Handiong brought forth the light of learning to Ibalong, teaching the people to read and write, while his sword kept evil at bay."
+            <p><b>Geographic/Mythical Locations:</b></p>
+            <ul>
+            <li style="text-align: left;">Mount Asog (Rabot's lair)</li>
+            <li style="text-align: left;">the first roads of Ibalong</li>
+            <li style="text-align: left;">sites of the earliest schools and courts</li>
+            <li style="text-align: left;">the royal settlement (predecessor to modern Legazpi)</li>
+            <li style="text-align: left;">Inarihan River</li>
+            </ul>
+            <p><b>Trivia or Fun Fact:</b> Handiong is credited with creating the first Filipino alphabet and legal code.</p>`,
+  },
+  // BANTONG - Spread 1
+  {
+    left: `<h2>Bantong</h2>
+            <img src="images/bantong.png" alt="Bantong" />`,
+    right: `<h2>Bantong</h2>
+            <p><b>Short Title:</b> "The Swift Warrior"</p>
+            <p><b>Mythical Origin / Ethnic Background:</b> Native-born hero of Ibalong - Third great hero, younger generation warrior trained under Handiong's guidance, representing the new breed of local-born defenders</p>
+            <p><b>Key Role in the Epic:</b> Bantong was the young warrior who completed the heroic trilogy by delivering the final blow to Rabot, the most fearsome monster in Ibalong, when even the mighty Handiong struggled to defeat it alone.</p>
+            <p><b>Major Feats or Contributions:</b></p>
+            <ul>
+            <li style="text-align: left;">Delivered the killing blow to the giant Rabot with a precise spear thrust</li>
+            <li style="text-align: left;">Demonstrated that skill and courage could triumph over size and strength</li>
+            <li style="text-align: left;">Became the symbol of the new generation of local heroes</li>
+            <li style="text-align: left;">Helped complete the pacification of Ibalong</li>
+            <li style="text-align: left;">Served as loyal lieutenant and eventual successor to Handiong</li>
+            </ul>`,
+  },
+  // BANTONG - Spread 2
+  {
+    left: `<h2>Bantong</h2>
+            <p><b>Symbolism / Cultural Meaning:</b> Symbol of youth, precision, loyalty, and the coming-of-age of the local people.</p>
+            <p><b>Allies and Enemies:</b></p>
+            <p>Allies: Handiong (mentor and commander), the warriors of Ibalong, local communities</p>
+            <p>Enemies: Rabot (the multi-headed giant), remaining monsters and threats to the kingdom</p>`,
+    right: `<h2>Bantong</h2>
+            <p><b>Known Artifacts or Tools:</b></p>
+            <ul>
+            <li style="text-align: left;">Legendary spear or bow that could pierce any hide</li>
+            <li style="text-align: left;">Hunting knives</li>
+            <li style="text-align: left;">Lightweight armor designed for speed and agility</li>
+            </ul>
+            <p><b>Quote / Excerpt from the Epic:</b> "Young Bantong, swift as the wind, struck true where others had failed, and the mighty Rabot fell at last to the courage of youth."
+            <p><b>Geographic/Mythical Locations:</b></p>
+            <ul>
+            <li style="text-align: left;">Mount Asog (site of Rabot's defeat)</li>
+            <li style="text-align: left;">training fields where Handiong taught him</li>
+            </ul>
+            <p><b>Trivia or Fun Fact:</b> Bantong is often considered the most relatable hero of the three, representing the "everyman" who rises to greatness through determination rather than supernatural strength. Some versions say he was the first hero born in Ibalong itself, making him truly a local champion. His victory over Rabot is celebrated in some areas as a coming-of-age story for the entire Bicol region.</p>`,
+  },
+  // TANDAYAG - Spread 1
+  {
+    left: `<h2>Tandayag</h2>
+            <img src="images/tandayag.png" alt="Tandayag" />`,
+    right: `<h2>Tandayag</h2>
+            <p><b>Short Title:</b> "The Mighty Boar of Ibalon"</p>
+            <p><b>Mythical Origin / Ethnic Background:</b> Ancient wild boar spirit of immense size and supernatural strength, embodying the untamed wilderness of early Bicol</p>
+            <p><b>Key Role in the Epic:</b> Primary antagonist representing the chaotic forces of nature that the heroes must overcome to establish civilization</p>
+            <p><b>Major Feats or Contributions:</b></p>
+            <ul>
+            <li style="text-align: left;">Terrorized the early inhabitants of Ibalon with his massive tusks and supernatural strength</li>
+            <li style="text-align: left;">Destroyed crops and settlements, preventing agricultural development</li>
+            <li style="text-align: left;">Served as the ultimate test of Baltog's heroic strength and leadership</li>
+            <li style="text-align: left;">His defeat marked the beginning of organized civilization in the region</li>
+            </ul>`,
+  },
+    // TANDAYAG - Spread 2
+  {
+    left: `<h2>Tandayag</h2>
+            <p><b>Symbolism / Cultural Meaning:</b> Represents the wild, untamed forces of nature that must be conquered for civilization to flourish; symbolizes the struggle between order and chaos, cultivation and wilderness</p>
+            <p><b>Allies and Enemies:</b></p>
+            <p>Allies: Other wild creatures and spirits of the forest</p>
+            <p>Enemies: Baltog (primary), early settlers of Ibalon</p>`,
+    right: `<h2>Tandayag</h2>
+            <p><b>Known Artifacts or Tools:</b></p>
+            <ul>
+            <li style="text-align: left;">His massive ivory tusks, which became trophies after his defeat</li>
+            </ul>
+            <p><b>Quote / Excerpt from the Epic:</b> "With tusks like spears and strength beyond measure, Tandayag ruled the wilderness with terror."
+            <p><b>Geographic/Mythical Locations:</b></p>
+            <ul>
+            <li style="text-align: left;">The dense forests and wild lands of ancient Ibalon</li>
+            <li style="text-align: left;">particularly the mountainous regions</li>
+            </ul>
+            <p><b>Trivia or Fun Fact:</b> Tandayag's tusks were said to be so large they could uproot entire trees, and his defeat required Baltog to use both strength and cunning rather than brute force alone.</p>`,
+  },
+    // ORYOL - Spread 1
+  {
+    left: `<h2>Oryol</h2>
+            <img src="images/oryol.png" alt="Oryol" />`,
+    right: `<h2>Oryol</h2>
+            <p><b>Short Title:</b> The Serpent Princess, The Beautiful Serpent</p>
+            <p><b>Mythical Origin / Ethnic Background:</b> Half-woman, half-serpent deity with origins in ancient Bicolano water and earth spirits</p>
+            <p><b>Key Role in the Epic:</b> Seductive antagonist who represents temptation and the dangerous allure of the supernatural world</p>
+            <p><b>Major Feats or Contributions:</b></p>
+            <ul>
+            <li style="text-align: left;">Possessed the power to shapeshift between beautiful woman and massive serpent</li>
+            <li style="text-align: left;">Lured warriors and heroes with her beauty before revealing her true nature</li>
+            <li style="text-align: left;">Controlled water sources and could cause floods or droughts</li>
+            <li style="text-align: left;">Challenged the heroes' resolve and moral strength</li>
+            </ul>`,
+  },
+    // ORYOL - Spread 2
+  {
+    left: `<h2>Oryol</h2>
+            <p><b>Symbolism / Cultural Meaning:</b> Embodies the dual nature of beauty and danger, the feminine mystique, and the power of water and fertility; represents temptation that tests moral character</p>
+            <p><b>Allies and Enemies:</b></p>
+            <p>Allies: Water spirits, other shape-shifting creatures</p>
+            <p>Enemies: Handyong (primary), other heroes of Ibalon</p>`,
+    right: `<h2>Oryol</h2>
+            <p><b>Known Artifacts or Tools:</b></p>
+            <ul>
+            <li style="text-align: left;">Her serpentine form itself</li>
+            <li style="text-align: left;">power over water and weather</li>
+            </ul>
+            <p><b>Quote / Excerpt from the Epic:</b> "Fair as the morning star was Oryol's face, but beneath lay the coils of the ancient serpent."
+            <p><b>Geographic/Mythical Locations:</b></p>
+            <ul>
+            <li style="text-align: left;">Rivers, lakes, and water sources throughout Ibalon</li>
+            <li style="text-align: left;">particularly associated with Mount Isarog area</li>
+            </ul>
+            <p><b>Trivia or Fun Fact:</b> Oryol's beauty was said to be so enchanting that even the bravest warriors would forget their purpose upon seeing her, making her defeat as much a triumph of will as of strength.</p>`,
+  },
+    // RABOT - Spread 1
+  {
+    left: `<h2>Rabot</h2>
+            <img src="images/rabot.png" alt="Rabot" />`,
+    right: `<h2>Rabot</h2>
+            <p><b>Short Title:</b> The Half-Man Half-Beast, The Ferocious Giant, The Mountain Terror</p>
+            <p><b>Mythical Origin / Ethnic Background:</b> Born from the savage wilderness, part human and part beast, representing the boundary between civilization and wild nature</p>
+            <p><b>Key Role in the Epic:</b> Formidable monster antagonist whose defeat represents another step in taming the wild lands of Ibalon.</p>
+            <p><b>Major Feats or Contributions:</b></p>
+            <ul>
+            <li style="text-align: left;">Possessed incredible physical strength combining human intelligence with bestial ferocity</li>
+            <li style="text-align: left;">Terrorized mountain regions and prevented settlement of highland areas</li>
+            <li style="text-align: left;">His hybrid nature made him particularly dangerous as he could think like a human but fight like a wild beast</li>
+            <li style="text-align: left;">His defeat opened up new territories for the people of Ibalon</li>
+            <li style="text-align: left;">Represented the evolutionary challenge between primitive and civilized existence</li>
+            </ul>`,
+  },
+    // RABOT - Spread 2
+  {
+    left: `<h2>Rabot</h2>
+            <p><b>Symbolism / Cultural Meaning:</b> Symbolizes the struggle between humanity's civilized nature and its primal instincts; represents the fears of regression to savagery and the ongoing battle to maintain civilization.</p>
+            <p><b>Allies and Enemies:</b></p>
+            <p>Allies: Other monsters and wild creatures of the mountains</p>
+            <p>Enemies: Handiong and other heroes who sought to civilize the land</p>`,
+    right: `<h2>Rabot</h2>
+            <p><b>Known Artifacts or Tools:</b></p>
+            <ul>
+            <li style="text-align: left;">His natural weapons - claws, fangs, and immense physical strength</li>
+            </ul>
+            <p><b>Quote / Excerpt from the Epic:</b> "Rabot's roar echoed through the mountains, a sound that froze the blood of even the bravest warriors."
+            <p><b>Geographic/Mythical Locations:</b></p>
+            <ul>
+            <li style="text-align: left;">Mountain caves and highland forests</li>
+            <li style="text-align: left;">particularly areas that were considered too dangerous for human settlement</li>
+            </ul>
+            <p><b>Trivia or Fun Fact:</b> Rabot's half-human, half-beast nature reflects ancient Filipino beliefs about the thin boundary between humanity and the animal world, suggesting transformation was always possible in both directions.</p>`,
+  },
+      // SARIMAO - Spread 1
+  {
+    left: `<h2>Sarimao</h2>
+            <img src="images/sarimao.png" alt="Sarimao" />`,
+    right: `<h2>Sarimao</h2>
+            <p><b>Short Title:</b> The Dog-like Monster, The Savage Hound, The Howling Terror</p>
+            <p><b>Mythical Origin / Ethnic Background:</b> Supernatural canine entity born from the wild spirits of the forest</p>
+            <p><b>Key Role in the Epic:</b> Beast antagonist representing loyalty corrupted and the dangers of uncontrolled animal instincts.</p>
+            <p><b>Major Feats or Contributions:</b></p>
+            <ul>
+            <li style="text-align: left;">Possessed extraordinary hunting abilities and pack leadership</li>
+            <li style="text-align: left;">Could rally other wild animals to attack human settlements</li>
+            <li style="text-align: left;">Represented the challenge of domesticating the natural world</li>
+            <li style="text-align: left;">His defeat symbolized humanity's mastery over animal kingdom</li>
+            <li style="text-align: left;">Served as a test of heroes' ability to face creatures that mirrored positive traits (loyalty, courage) turned malevolent</li>
+            </ul>`,
+  },
+    // SARIMAO - Spread 2
+  {
+    left: `<h2>Sarimao</h2>
+            <p><b>Symbolism / Cultural Meaning:</b> Represents the double-edged nature of animal traits - loyalty and ferocity, protection and destruction; symbolizes the need to channel animal instincts constructively rather than destructively.</p>
+            <p><b>Allies and Enemies:</b></p>
+            <p>Allies: Wild dogs, wolves, and other pack animals of the forest</p>
+            <p>Enemies: The heroes and settlers of Ibalon</p>`,
+    right: `<h2>Sarimao</h2>
+            <p><b>Known Artifacts or Tools:</b></p>
+            <ul>
+            <li style="text-align: left;">Natural weapons of fangs and claws</li>
+            <li style="text-align: left;">supernatural howl that could summon other beasts</li>
+            </ul>
+            <p><b>Quote / Excerpt from the Epic:</b> "The howl of Sarimao called forth all the wild dogs of the forest, their eyes gleaming like stars in the darkness."
+            <p><b>Geographic/Mythical Locations:</b></p>
+            <ul>
+            <li style="text-align: left;">Dense forests and hunting grounds where wild packs roamed</li>
+            </ul>
+            <p><b>Trivia or Fun Fact:</b> Sarimao's characterization reflects the ancient Bicolano understanding of dogs as both protectors and potential threats, embodying the importance of proper relationships between humans and animals.</p>`,
+  },
+     // BURING - Spread 1
+  {
+    left: `<h2>Buring</h2>
+            <img src="images/buring.png" alt="Buring" />`,
+    right: `<h2>Buring</h2>
+            <p><b>Short Title:</b> The One-Eyed Giant, The Cyclops of Ibalon, The Mountain Guardian</p>
+            <p><b>Mythical Origin / Ethnic Background:</b> Giant born from the rocks and stones of the mountains, embodying geological forces</p>
+            <p><b>Key Role in the Epic:</b> Colossal antagonist representing the massive, seemingly immovable obstacles that civilization must overcome.</p>
+            <p><b>Major Feats or Contributions:</b></p>
+            <ul>
+            <li style="text-align: left;">Possessed strength capable of hurling massive boulders</li>
+            <li style="text-align: left;">His single eye could see great distances, making surprise attacks difficult</li>
+            <li style="text-align: left;">Controlled mountain passes and prevented trade and communication</li>
+            <li style="text-align: left;">His defeat opened up major transportation routes</li>
+            <li style="text-align: left;">Represented the challenge of overcoming seemingly impossible odds through cleverness rather than just strength</li>
+            </ul>`,
+  },
+    // BURING - Spread 2
+  {
+    left: `<h2>Buring</h2>
+            <p><b>Symbolism / Cultural Meaning:</b> Symbolizes the massive challenges that appear insurmountable but can be overcome through wisdom, strategy, and perseverance; represents the geological forces that shape the landscape and must be worked with rather than against.</p>
+            <p><b>Allies and Enemies:</b></p>
+            <p>Allies: Other giants and mountain spirits</p>
+            <p>Enemies: Heroes seeking to connect the communities of Ibalon</p>`,
+    right: `<h2>Buring</h2>
+            <p><b>Known Artifacts or Tools:</b></p>
+            <ul>
+            <li style="text-align: left;">Massive stone weapons and his all-seeing eye</li>
+            </ul>
+            <p><b>Quote / Excerpt from the Epic:</b> "With his single eye, Buring could spot a sparrow from across the valley, but wisdom blinded him to the hero's clever approach."
+            <p><b>Geographic/Mythical Locations:</b></p>
+            <ul>
+            <li style="text-align: left;">Mountain passes, rocky outcroppings, and stone formations throughout Ibalon</li>
+            </ul>
+            <p><b>Trivia or Fun Fact:</b> Buring's single eye likely represents the focused but limited perspective that comes with great power - suggesting that even the mightiest can be defeated by those who see the bigger picture.</p>`,
+  },
+      // BUAYA - Spread 1
+  {
+    left: `<h2>Buaya</h2>
+            <img src="images/buaya.png" alt="Buaya" />`,
+    right: `<h2>Buaya</h2>
+            <p><b>Short Title:</b> The Great Crocodile, The River Dragon, The Swamp Terror</p>
+            <p><b>Mythical Origin / Ethnic Background:</b> Ancient reptilian spirit born from the primordial waters and swamplands of Ibalon</p>
+            <p><b>Key Role in the Epic:</b> Aquatic monster representing the untamed waterways and the dangers that lurked beneath the surface of rivers and swamps.</p>
+            <p><b>Major Feats or Contributions:</b></p>
+            <ul>
+            <li style="text-align: left;">Controlled the major waterways of Ibalon, preventing safe river travel and fishing</li>
+            <li style="text-align: left;">Possessed armor-like scales that made him nearly invulnerable to conventional weapons</li>
+            <li style="text-align: left;">Could remain submerged for long periods, launching surprise attacks on unsuspecting victims</li>
+            <li style="text-align: left;">His massive jaws could crush canoes and small boats with ease</li>
+            <li style="text-align: left;">His defeat made river transportation and fishing safe for the people of Ibalon</li>
+            <li style="text-align: left;">Represented mastery over the aquatic realm alongside the terrestrial victories</li>
+            </ul>`,
+  },
+    // BUAYA - Spread 2
+  {
+    left: `<h2>Buaya</h2>
+            <p><b>Symbolism / Cultural Meaning:</b> Embodies the hidden dangers of water and the need for respect and caution around aquatic environments; represents the primal fears of being consumed or dragged into the depths; symbolizes the importance of conquering fear to utilize natural resources safely.</p>
+            <p><b>Allies and Enemies:</b></p>
+            <p>Allies: Other water spirits, serpents, and aquatic monsters</p>
+            <p>Enemies: Heroes of Ibalon, particularly those who needed to cross waterways or establish fishing communities</p>`,
+    right: `<h2>Buaya</h2>
+            <p><b>Known Artifacts or Tools:</b></p>
+            <ul>
+            <li style="text-align: left;">Impenetrable scales that served as natural armor</li>
+            <li style="text-align: left;">powerful jaws capable of crushing stone</li>
+            <li style="text-align: left;">ability to remain hidden underwater for extended periods</li>
+            </ul>
+            <p><b>Quote / Excerpt from the Epic:</b> "The great Buaya rose from the murky depths, his eyes like burning coals above the water, his jaws wide enough to swallow a warrior whole."
+            <p><b>Geographic/Mythical Locations:</b></p>
+            <ul>
+            <li style="text-align: left;">Rivers, swamps, and marshlands throughout Ibalon</li>
+            <li style="text-align: left;">particularly the major waterways that connected different regions</li>
+            </ul>
+            <p><b>Trivia or Fun Fact:</b> Buaya represents the real dangers that crocodiles posed to ancient Filipino communities, but elevated to mythic proportions. His defeat symbolized not just physical conquest but the mastery of water-based resources essential for agriculture and trade.</p>`,
+  },
 ];
 
 // Split content into pages
 const pages = splitContentIntoPages(originalContent);
-  
-  let currentIndex = 0;
+
+let currentIndex = 0;
 let isAnimating = false;
 
 // Add popup functionality
 function createPopup() {
-    const popup = document.createElement('div');
-    popup.className = 'image-popup';
-    document.body.appendChild(popup);
-    return popup;
+  const popup = document.createElement("div");
+  popup.className = "image-popup";
+  document.body.appendChild(popup);
+  return popup;
 }
 
 function showPopup(element, imagePath) {
-    const popup = document.querySelector('.image-popup') || createPopup();
-    const rect = element.getBoundingClientRect();
-    
-    popup.innerHTML = `<img src="images/${imagePath}" alt="${element.textContent}">`;
-    popup.style.display = 'block';
-    
-    // Position the popup
-    const popupRect = popup.getBoundingClientRect();
-    let left = rect.left + (rect.width / 2) - (popupRect.width / 2);
-    let top = rect.bottom + 10;
-    
-    // Adjust if popup would go off screen
-    if (left + popupRect.width > window.innerWidth) {
-        left = window.innerWidth - popupRect.width - 10;
-    }
-    if (top + popupRect.height > window.innerHeight) {
-        top = rect.top - popupRect.height - 10;
-    }
-    
-    popup.style.left = `${left}px`;
-    popup.style.top = `${top}px`;
+  const popup = document.querySelector(".image-popup") || createPopup();
+  const rect = element.getBoundingClientRect();
+
+  popup.innerHTML = `<img src="images/${imagePath}" alt="${element.textContent}">`;
+  popup.style.display = "block";
+
+  // Position the popup
+  const popupRect = popup.getBoundingClientRect();
+  let left = rect.left + rect.width / 2 - popupRect.width / 2;
+  let top = rect.bottom + 10;
+
+  // Adjust if popup would go off screen
+  if (left + popupRect.width > window.innerWidth) {
+    left = window.innerWidth - popupRect.width - 10;
+  }
+  if (top + popupRect.height > window.innerHeight) {
+    top = rect.top - popupRect.height - 10;
+  }
+
+  popup.style.left = `${left}px`;
+  popup.style.top = `${top}px`;
 }
 
 function hidePopup() {
-    const popup = document.querySelector('.image-popup');
-    if (popup) {
-        popup.style.display = 'none';
-    }
+  const popup = document.querySelector(".image-popup");
+  if (popup) {
+    popup.style.display = "none";
+  }
 }
 
 // Add event listeners for popups
 function addPopupListeners() {
-    document.querySelectorAll('.character, .creature, .landmark').forEach(element => {
-        element.addEventListener('mouseenter', (e) => {
-            const imagePath = e.target.dataset.image;
-            showPopup(e.target, imagePath);
-        });
-        
-        element.addEventListener('mouseleave', hidePopup);
+  document
+    .querySelectorAll(".character, .creature, .landmark")
+    .forEach((element) => {
+      element.addEventListener("mouseenter", (e) => {
+        const imagePath = e.target.dataset.image;
+        showPopup(e.target, imagePath);
+      });
+
+      element.addEventListener("mouseleave", hidePopup);
     });
 }
-  
-  function renderPages() {
-    const leftPage = document.getElementById("left-page");
-    const rightPage = document.getElementById("right-page");
-    
-    // Clear existing content
-    leftPage.innerHTML = '';
-    rightPage.innerHTML = '';
-    
-    // Add new content
-    const leftContent = document.createElement('div');
-    leftContent.className = 'page-content';
-    leftContent.innerHTML = pages[currentIndex].left;
-    leftPage.appendChild(leftContent);
-    
-    const rightContent = document.createElement('div');
-    rightContent.className = 'page-content';
-    rightContent.innerHTML = pages[currentIndex].right;
-    rightPage.appendChild(rightContent);
-    
-    // Add page numbers
-    const leftPageNum = document.createElement('div');
-    leftPageNum.className = 'page-number';
-    leftPageNum.textContent = `Page ${currentIndex * 2 + 1}`;
-    leftPage.appendChild(leftPageNum);
-    
-    const rightPageNum = document.createElement('div');
-    rightPageNum.className = 'page-number';
-    rightPageNum.textContent = `Page ${currentIndex * 2 + 2}`;
-    rightPage.appendChild(rightPageNum);
-    
-    // Update button states
-    document.querySelector('button[onclick="prevPage()"]').disabled = currentIndex === 0;
-    document.querySelector('button[onclick="nextPage()"]').disabled = currentIndex === pages.length - 1;
-    
-    // Add popup listeners to new content
-    addPopupListeners();
+
+// Function to turn the page
+function turnPage(direction) {
+  if (isAnimating) return;
+  isAnimating = true;
+
+  const leftPage = document.getElementById("left-page");
+  const rightPage = document.getElementById("right-page");
+
+  // Add turning class for animation
+  rightPage.classList.add("turning");
+
+  // After animation completes
+  setTimeout(() => {
+    rightPage.classList.remove("turning");
+    if (direction === "next") {
+      currentIndex += 2; // Increment by 2 to move to the next spread
+    } else {
+      currentIndex -= 2; // Decrement by 2 to move to the previous spread
+    }
+    renderPages();
+    isAnimating = false;
+  }, 600); // Match this with CSS transition duration
 }
 
-function turnPage(direction) {
-    if (isAnimating) return;
-    isAnimating = true;
-
-    const rightPage = document.getElementById('right-page');
-    const leftPage = document.getElementById('left-page');
-    
-    if (direction === 'next') {
-        // Preload next page content on the right
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < pages.length) {
-            const rightContent = document.createElement('div');
-            rightContent.className = 'page-content';
-            rightContent.innerHTML = pages[nextIndex].right;
-            rightContent.style.opacity = '0';
-            rightPage.appendChild(rightContent);
-            
-            // Add page number
-            const rightPageNum = document.createElement('div');
-            rightPageNum.className = 'page-number';
-            rightPageNum.textContent = `Page ${nextIndex * 2 + 2}`;
-            rightPage.appendChild(rightPageNum);
-        }
-    }
-    
-    // Add turning class for animation
-    rightPage.classList.add('turning');
-
-    // After animation completes
-    setTimeout(() => {
-        rightPage.classList.remove('turning');
-        if (direction === 'next') {
-            currentIndex++;
-        } else {
-            currentIndex--;
-        }
-        renderPages();
-        isAnimating = false;
-    }, 600); // Match this with CSS transition duration
+function nextPage() {
+  if (currentIndex + 2 <= pages.length && !isAnimating) { // Check if there's a next spread (2 pages) available
+    turnPage("next");
   }
-  
-  function nextPage() {
-    if (currentIndex < pages.length - 1 && !isAnimating) {
-        turnPage('next');
-    }
+}
+
+function prevPage() {
+  if (currentIndex >= 2 && !isAnimating) { // Check if there's a previous spread (2 pages) available
+    turnPage("prev");
   }
-  
-  function prevPage() {
-    if (currentIndex > 0 && !isAnimating) {
-        turnPage('prev');
-    }
 }
 
 // Add keyboard navigation
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight') {
-        nextPage();
-    } else if (e.key === 'ArrowLeft') {
-        prevPage();
-    }
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") {
+    nextPage();
+  } else if (e.key === "ArrowLeft") {
+    prevPage();
+  }
 });
 
 // Add touch support for mobile
 let touchStartX = 0;
 let touchEndX = 0;
 
-document.querySelector('.book').addEventListener('touchstart', (e) => {
-    touchStartX = e.changedTouches[0].screenX;
+document.querySelector(".book").addEventListener("touchstart", (e) => {
+  touchStartX = e.changedTouches[0].screenX;
 });
 
-document.querySelector('.book').addEventListener('touchend', (e) => {
-    touchEndX = e.changedTouches[0].screenX;
-    handleSwipe();
+document.querySelector(".book").addEventListener("touchend", (e) => {
+  touchEndX = e.changedTouches[0].screenX;
+  handleSwipe();
 });
 
 function handleSwipe() {
-    const swipeThreshold = 50;
-    const diff = touchStartX - touchEndX;
+  const swipeThreshold = 50;
+  const diff = touchStartX - touchEndX;
 
-    if (Math.abs(diff) > swipeThreshold) {
-        if (diff > 0) {
-            nextPage();
-        } else {
-            prevPage();
-        }
+  if (Math.abs(diff) > swipeThreshold) {
+    if (diff > 0) {
+      nextPage();
+    } else {
+      prevPage();
     }
   }
-  
-  window.onload = renderPages;
-  
+}
